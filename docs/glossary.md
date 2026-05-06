@@ -1,0 +1,245 @@
+# 용어 & 개념 사전
+
+jch가 누적 정리하는 개인 학습 리소스. 비자명한 기술 용어를 작업 중 등장 시점에 추가. **도메인별 분류** (카테고리 내부 알파벳 순), **영문 용어는 번역하지 않음** (한글 alias 추가 금지, 한국어 설명 prose는 유지). 각 항목 끝 "**이 프로젝트에서**:" 줄로 도메인 적용 적시.
+
+---
+
+## 아키텍처 & 데이터
+
+### ACID
+
+데이터베이스 트랜잭션의 4가지 속성 — Atomicity, Consistency, Isolation, Durability. 한 트랜잭션이 모두 성공하거나 모두 실패해야 한다는 약속.
+
+**이 프로젝트에서**: git 커밋도 ACID처럼 다룸 = 한 커밋이 하나의 완결된 논리 변경. 부분 커밋 금지. AGENTS.md 운영 원칙 3.3.
+
+### Append-only
+
+한번 쓰인 레코드를 수정/삭제하지 않고, 변경은 새 레코드 추가로만 표현하는 방식. 이력 보존 + 동시성 충돌 회피.
+
+**이 프로젝트에서**: `supabase/migrations/`는 append-only 기본값. DROP/RENAME은 `MIGRATION_DESTRUCTIVE` 플래그 필수 (제약 #12).
+
+### JSON Resume
+
+이력서 데이터를 표현하는 오픈 스펙 (https://jsonresume.org). basics/work/education/skills/projects/awards/certificates/languages/interests/references/volunteer/publications 등 표준 12 필드.
+
+**이 프로젝트에서**: 사용자 데이터의 _데이터 계약_. 모든 페이지 트리는 JSON Resume과 호환되도록 export 가능해야 함 (제약 #14, F-022, ADR-0002).
+
+### SSOT (Single Source of Truth)
+
+어떤 정보의 진실을 정의하는 _단 하나의_ 위치. 같은 정보가 두 곳에 있으면 동기화 비용 + 불일치 위험.
+
+**이 프로젝트에서**: AGENTS.md = 운영 규칙의 SSOT. feature_list.json = 백로그의 SSOT. DESIGN.md = 시각/UX의 SSOT. git 커밋 = done 이벤트의 SSOT. CLAUDE.md/.cursorrules는 stub. AGENTS.md Section 0.
+
+---
+
+## 보안
+
+### RLS (Row Level Security)
+
+PostgreSQL 기능. 같은 테이블이라도 행(row) 단위로 누가 읽고 쓸 수 있는지 SQL 정책으로 정의. 애플리케이션 코드 우회로 데이터 접근해도 정책이 차단.
+
+**이 프로젝트에서**: 모든 사용자 데이터 테이블에 RLS 활성화 + `auth.uid() = owner_id` 정책 강제 (제약 #11). 마이그레이션 시 `_rls.sql` 별도 파일로 append.
+
+---
+
+## 소프트웨어 설계 원칙
+
+### DRY (Don't Repeat Yourself)
+
+같은 정보·로직을 두 곳 이상에 복제하지 않는다는 원칙. 중복은 동기화 부담 + 불일치 버그를 낳음.
+
+**이 프로젝트에서**: AGENTS.md 규칙을 CLAUDE.md에 다시 적지 않는 결정의 근거 (ADR-0006). 디자인 토큰을 컴포넌트마다 하드코딩 안 하는 근거 (ADR-0009).
+
+### Idempotent
+
+같은 작업을 여러 번 실행해도 결과가 1회 실행과 동일한 성질. 네트워크 재시도·자동 복구의 전제.
+
+**이 프로젝트에서**: `init.sh`는 멱등(idempotent)이어야 함 — 두 번 돌려도 부작용 없이 같은 상태 도달. Stripe 웹훅 처리도 idempotent (P2-2, Phase 2).
+
+---
+
+## 운영 방법론
+
+### ADR (Architecture Decision Record)
+
+아키텍처 결정과 사유를 기록한 짧은 문서. 표준 4섹션: Context / Decision / Consequences / Alternatives Considered.
+
+**이 프로젝트에서**: `docs/adr/`에 누적 (현재 9개, F-001 산출물). 비타협 결정 발생 시 코드보다 ADR 먼저. 17개 제약은 *결과*이고 ADR이 _사유_. AGENTS.md Section 0.1.
+
+### Harness Engineering
+
+1인+AI 위임 환경에서 *코드 작성 자체*보다 *어떤 작업을 어떤 게이트로 통과시킬지*의 인프라가 더 비싼 보험이라는 접근. 4대 프리미티브: AGENTS.md / feature_list.json / init.sh / claude-progress.md.
+
+**이 프로젝트에서**: 첫 git 커밋 전에 이 4개 + DESIGN.md + glossary 박는 결정의 근거. 모든 후속 작업이 이 하네스를 통과해서 들어옴.
+
+### Pass-state Gating
+
+어떤 통과 조건(테스트, lint, schema 검증 등)을 만족할 때만 다음 단계로 넘어가게 하는 게이트. ACID의 atomic처럼 통과 or 비통과만 존재, 부분 통과 없음.
+
+**이 프로젝트에서**: husky pre-commit + GitHub Actions가 이 게이트를 구현. init.sh 한 단계라도 실패 시 비제로 종료. AGENTS.md 3.3.
+
+### Plan-as-Code
+
+외부 도구(Notion, Linear) 대신 plan을 *Markdown + git*으로 영구화하는 접근. SSOT 분산 회피 + 도구 락인 0 + git이 형상관리. ADR-0010이 우리 구현.
+
+**이 프로젝트에서**: `docs/plans/NNNN-<topic>.md` 표준. frontmatter(id/status/supersedes 등) + Pre-mortem 섹션 강제. Claude Code plan 모드의 `.claude/plans/<random>.md` draft → 사용자 승인 후 백포팅.
+
+### Pre-mortem
+
+작업 _시작 전_ "이 plan이 6개월 후 실패한다면 _왜_ 실패했을까?" 미리 적기. 보이지 않는 위험을 강제로 가시화하는 도구. Post-mortem(사후 회고)의 거울.
+
+**이 프로젝트에서**: `docs/plans/` 모든 plan에 Pre-mortem 섹션 강제 (ADR-0010). 형식적 채움 방지를 위해 plan 리뷰 시 진짜 위험을 짚었는지 별도 체크.
+
+### Project Inception
+
+프로젝트의 _시작 단계_. 비전·요구사항·아키텍처·팀 구성 등 기본 frame을 박는 phase. RUP/Lean 용어. 산업에선 보통 "Phase 0" 또는 "0단계"로 부르기도.
+
+**이 프로젝트에서**: 첫 git 커밋 *전*에 박은 모든 작업(AGENTS.md / 17 제약 / ADR / feature_list.json / DESIGN.md / glossary)이 inception. *Harness Engineering*과 결합해 솔로+AI 위임 게이트까지 함께 박음.
+
+### RFC (Request for Comments)
+
+큰 변경·신규 기능 *제안*을 markdown 문서로 작성·토론·승인 추적하는 패턴. Rust, IETF, 대형 OSS 표준. plan과 비슷하지만 _공개 토론_ 색이 더 강함.
+
+**이 프로젝트에서**: 솔로 환경이라 직접 RFC 운영 X. `docs/plans/`이 비슷한 역할 (plan = inner-RFC). Phase 2 협업 합류 시 RFC 패턴 도입 검토.
+
+### Spike (Architecture Spike)
+
+XP/Agile 용어. _미지의 기술·구현 가능성_ 탐색을 위한 짧은 작업. 결과는 코드 또는 아키텍처 결정. 일반 작업 일정과 분리.
+
+**이 프로젝트에서**: F-013(드래그+@dnd-kit) 같은 위험 항목이 spike 성격 — 미경험 기술 검증. *작은 spike*는 plan 안 박고 바로 시도, *큰 spike*는 plan에 위험 명시 + 시간 박스로 제한.
+
+### Sprint Zero (Day 0)
+
+Agile/DevOps 용어. *첫 sprint*를 실제 작업이 아닌 셋업(인프라·CI·도구·골격)에 쓰는 것. 운영 시작 _전_ 작업이라 "Day 0".
+
+**이 프로젝트에서**: 부트스트랩(F-001+F-005+F-006) 묶음이 정확히 Sprint Zero. 일반 셋업과 다른 점 — *AI 에이전트 위임 게이트*까지 박는 *Harness Engineering*을 함께.
+
+### WIP=1 (Work In Progress = 1)
+
+동시에 진행 중인 작업이 정확히 1개로 제한된 상태. 컨텍스트 스위칭 비용 0, 한 작업의 완결성 보장.
+
+**이 프로젝트에서**: feature_list.json `max_in_progress: 1`로 강제. paused 상태는 허용 (이유 기록 강제). `wip_lock=false` 메타 작업은 카운트 제외. 솔로+AI에서 큰 효과 (ADR-0007).
+
+---
+
+## 코드 품질
+
+### ESLint
+
+JavaScript/TypeScript 코드의 _논리_ 문제를 검사하는 정적 분석 도구. 미사용 변수, await 빠진 비동기, console.log 잔존 등 잡음.
+
+**이 프로젝트에서**: `.eslintrc.cjs`에 `eslint-plugin-boundaries` 박아서 `src/server`↔`src/components` import 차단 + `no-restricted-imports`로 Canvas 라이브러리 차단(A1). ESLint 8 사용 (boundaries v5 + ESLint 9 호환 미검증으로 fallback).
+
+### Prettier
+
+코드의 _모양_ 통일 — 들여쓰기, 줄 바꿈, 따옴표 종류, 트레일링 콤마. 의견 분쟁이 없게 strict하게 정형화.
+
+**이 프로젝트에서**: `.prettierrc`로 singleQuote / trailingComma=all / printWidth=100. lint-staged가 staged 파일에 자동 적용.
+
+### Stylelint
+
+CSS의 무효 속성, 비표준 사용, 패턴 위반 등을 잡는 린터.
+
+**이 프로젝트에서**: `.stylelintrc.json`에 `custom-property-pattern: ^(color|space|font|radius|shadow|z|breakpoint)-` 강제 → A3(CSS 변수만 사용) 자동 검증.
+
+### TypeScript
+
+JavaScript의 정적 타입 시스템. 컴파일 시점에 타입 오류(숫자에 문자열 더하기, 없는 함수 호출 등) 차단.
+
+**이 프로젝트에서**: strict 모드 + path aliases(`@/*` → `src/*`). `tsconfig.json`. `pnpm typecheck` (`tsc --noEmit`)가 init.sh 첫 단계.
+
+---
+
+## Git 게이트
+
+### commitlint
+
+커밋 메시지 형식을 강제하는 도구. conventional commits (`feat:`, `fix:` 등) + 우리 커스텀 룰.
+
+**이 프로젝트에서**: `commitlint.config.cjs`에 feature ID(`F-\d{3}`) 포함 강제. 누락 시 커밋 거부. `feat: F-002 lib/env.ts에 zod 검증` 형태 표준. git log를 done 이벤트의 SSOT로 만드는 핵심.
+
+### husky
+
+git의 _훅_(pre-commit, commit-msg 등 특정 시점에 자동 실행되는 스크립트)을 관리하는 도구.
+
+**이 프로젝트에서**: `.husky/pre-commit`이 lint-staged → init.sh 호출. `.husky/commit-msg`가 commitlint 호출. 1차 게이트 (AGENTS.md 3.3).
+
+### lint-staged
+
+git에 staged된 _변경된 파일만_ 골라서 검사 도구(prettier/ESLint 등)에 넘기는 도구. 매 커밋마다 전체 코드베이스 검사하면 느려서.
+
+**이 프로젝트에서**: `.lintstagedrc.json` 또는 package.json에 정의. staged TS/CSS 파일에 prettier + ESLint/Stylelint 적용. husky pre-commit이 호출.
+
+---
+
+## CI
+
+### GitHub Actions
+
+GitHub의 CI 시스템. 저장소 이벤트(push, PR 등)에 반응해 가상 머신에서 워크플로 자동 실행.
+
+**이 프로젝트에서**: `.github/workflows/ci.yml`이 PR/push 시 init.sh 호출 → 모든 게이트 재실행. 2차 게이트 — 로컬 우회한 경우도 못 빠져나감 (AGENTS.md 3.3).
+
+### Lighthouse
+
+Google 제공의 웹 페이지 품질 측정 도구. SEO/성능/접근성/PWA 점수를 0-100으로 산출.
+
+**이 프로젝트에서**: F-021에서 `.github/workflows/lighthouse.yml`로 PR마다 자동 측정. SEO 점수 ≥ 90 게이트 (E17 자동 검증의 핵심).
+
+---
+
+## 프레임워크 & 툴링
+
+### ajv
+
+JSON Schema 검증 엔진 (Another JSON Validator). draft-2020-12 등 최신 사양 지원.
+
+**이 프로젝트에서**: `scripts/validate-feature-list.ts`가 ajv로 `feature_list.schema.json`을 사용해 `feature_list.json` 검증. F-005 핵심 라이브러리.
+
+### Boundary plugin (eslint-plugin-boundaries)
+
+ESLint 플러그인. 폴더/파일 그룹 간 import 방향을 정의해서 위반 시 빌드 실패 처리.
+
+**이 프로젝트에서**: `src/server` → `src/components` import 차단, `src/components` → `src/server` 차단, 'use client' 파일 → 'server-only' 모듈 차단 (제약 #10).
+
+### Docker Compose
+
+여러 컨테이너를 정의·기동·관리하는 도구 (단일 머신용). `docker-compose.yml`로 서비스 정의.
+
+**이 프로젝트에서**: 부트스트랩에선 stub만(`services: {}`). F-003에서 supabase CLI가 자체 docker-compose 관리 (`supabase start/stop`).
+
+### Drizzle (drizzle-orm)
+
+TypeScript ORM. raw SQL에 가까운 API + 타입 안전. drizzle-zod로 zod 스키마 자동 생성.
+
+**이 프로젝트에서**: DB 접근의 유일 경로 (제약 #8). Prisma보다 가벼움 + 마이그레이션 SQL 명시적 (Prisma의 schema.prisma DSL과 다름). drizzle.config.ts 출력 경로 = `supabase/migrations/`.
+
+### Next.js
+
+React 기반 풀스택 프레임워크. App Router (Server Components + Server Actions), 파일 기반 라우팅, SSR/SSG/ISR 통합.
+
+**이 프로젝트에서**: 15.x App Router 사용. React 19 동반. `src/app/p/*`(사용자 페이지)는 SSR + 가벼운 번들, `src/app/editor/*`(편집기)는 클라이언트 heavy.
+
+### pnpm
+
+빠르고 디스크 효율적인 Node.js 패키지 매니저. npm/yarn 대체. 의존성을 단일 글로벌 store에 보관 + 프로젝트는 symlink.
+
+**이 프로젝트에서**: 10.x 사용. `package.json`의 `packageManager: pnpm@10.33.4`로 버전 잠금. lock 파일 `pnpm-lock.yaml`.
+
+### Server-only
+
+Next.js 패키지. 모듈 상단에 `import 'server-only'` 명시하면 클라이언트 번들에 포함 시 빌드 에러.
+
+**이 프로젝트에서**: `src/db/`, `src/server/` 모듈 모두 server-only로 격리. DB 접근·시크릿 사용 코드가 클라이언트에 새는 것을 빌드 시점에 차단 (제약 #10).
+
+### Supabase
+
+Postgres + Auth + Storage + Realtime 통합 BaaS (Backend as a Service). 자체 호스팅 또는 클라우드.
+
+**이 프로젝트에서**: 데이터·인증·파일 저장의 단일 백엔드. RLS 정책으로 권한 강제 (제약 #11). Phase 2에 Supabase Sync Engine으로 Stripe 통합 가능.
+
+### Tailwind CSS
+
+유틸리티-퍼스트 CSS 프레임워크. 클래스로 직접 스타일링.
+
+**이 프로젝트에서**: 3.4.x 사용 (Phase 1, 4.x는 Phase 2 검토). 디자인 토큰은 `tailwind.config.ts`에 박지만 *F-007 build-tokens.ts*가 DESIGN.md에서 derive해서 채움. 컴포넌트 작업 시 `--space-md` 등 토큰 경유.
