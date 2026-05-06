@@ -9,20 +9,31 @@ colors:
   text-secondary: TBD
   border: TBD
 typography:
+  # ADR-0011 한국어 타이포 강제 — Pretendard 1차 + KR best practice
+  font-ko: "'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif"
+  font-en: 'Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+  font-ja: "'Noto Sans JP', -apple-system, system-ui, sans-serif"
+  letter-spacing-default: '-0.02em' # KR best practice (토스/네이버/다음 표준)
+  letter-spacing-en: '0' # 영문 전용 텍스트
+  line-height-heading: '1.35' # range 1.3~1.4
+  line-height-body: '1.55' # range 1.5~1.6
+  line-height-caption: '1.4'
   heading-xl:
-    fontFamily: TBD
-    fontSize: TBD
+    fontSize: TBD # F-008 작업 시 결정
     fontWeight: TBD
   heading-lg:
-    fontFamily: TBD
+    fontSize: TBD
+    fontWeight: TBD
+  heading-md:
     fontSize: TBD
     fontWeight: TBD
   body-md:
-    fontFamily: TBD
     fontSize: TBD
     fontWeight: TBD
   body-sm:
-    fontFamily: TBD
+    fontSize: TBD
+    fontWeight: TBD
+  caption:
     fontSize: TBD
     fontWeight: TBD
 spacing:
@@ -68,6 +79,18 @@ rounded:
 ## Shapes
 
 (F-008 작업 시 border-radius 스케일 추가)
+
+## Icons (ADR-0012)
+
+**라이브러리**: [Coolicons](https://coolicons.cool) — 일관 규칙 + 무료 + 상업 이용 OK.
+
+**큐레이션 정책**:
+
+- F-008 작업 시 자주 쓸 30개를 미리 골라 `src/lib/icons/` 또는 manifest로 export
+- 컴포넌트 작업 중 큐레이션 외 아이콘 추가는 동일 라이브러리 안에서만 (다른 라이브러리 섞기 금지 — 일관성 깨짐, AI 슬롭 위험)
+- 라이선스 파일/조건은 F-026(법적 페이지) 작업 시 `docs/legal/` 또는 `LICENSES.md`에 명시
+
+(F-008 작업 시 30개 큐레이션 박힘)
 
 ## Components
 
