@@ -335,3 +335,43 @@ Postgres + Auth + Storage + Realtime 통합 BaaS (Backend as a Service). 자체 
 유틸리티-퍼스트 CSS 프레임워크. 클래스로 직접 스타일링.
 
 **이 프로젝트에서**: 3.4.x 사용 (Phase 1, 4.x는 Phase 2 검토). 디자인 토큰은 `tailwind.config.ts`에 박지만 *F-007 build-tokens.ts*가 DESIGN.md에서 derive해서 채움. 컴포넌트 작업 시 `--space-md` 등 토큰 경유.
+
+---
+
+## 비즈니스 모델 & 수익화
+
+### Design system preset
+
+사용자가 _저장_ 한 디자인 토큰 묶음 (color/typography/spacing/radius 등). 페이지에 _적용_ 가능. 일반 _개별 페이지 theme override_ 와 다름 — preset은 _전역 저장_, override는 _페이지별 미세 조정_.
+
+**이 프로젝트에서**: F-035 (Design System Presets) 영역. design*systems 테이블 + tokens_json 컬럼 + page.design_system_id 외래키로 적용. F-015 (인스펙터)의 page meta theme override와 *분리\_ (ADR-0015). 무료 1개 / 유료 N개 (ADR-0016).
+
+### Feature flag
+
+기능을 코드에 박은 채 _런타임_ 활성/비활성 toggle. **soft flag**: UI 표시 + 차단 X (사용자 가시성 + upgrade 권유). **hard flag**: 강제 차단. 보통 soft → hard 단계화로 사용자 학습 + 결제 트리거.
+
+**이 프로젝트에서**: F-036 (Portfolio Version Limits) plan*limit이 soft flag (F-100 결제 활성 *전\_). F-100 활성 시 hard 차단으로 한 줄 변경 (단일 enforcement 함수 패턴, ADR-0016).
+
+### Free / Pro / Team
+
+SaaS 표준 3 tier 비즈니스 모델. **Free**: 진입 장벽 0, 핵심 기능 일부 + 표시 (badge 등). **Pro**: 개인 유료 — 양적 제한 해제 + 부가 기능 (custom domain 등). **Team**: 조직 유료 — multi-user + 권한 + 협업.
+
+**이 프로젝트에서**: ADR-0016 명세. Free = 1 발행 포폴 + 1 design system + C3 subdomain + C3 badge. Pro = N 포폴 + N design systems + custom domain + JSON Resume 고급 + no badge. Team = multi-user + 기업 채용 페이지 + shared design system + 지원자 유입 분석. F-100 (Stripe) 활성 시 plan_limit hard.
+
+### Page-level theme override
+
+design system preset _위에_ _이 페이지만_ 미세 조정. 예: preset은 보라색이지만 _이 포트폴리오만_ 파란색. 전역 preset은 변하지 않음.
+
+**이 프로젝트에서**: F-015 (인스펙터) 영역 — page.theme*override_json 컬럼에 저장. design system preset(F-035)과 분리 (ADR-0015 territory). preset 적용 후 *페이지별 미세 조정\_ 자유.
+
+### Plan limit
+
+플랜별 사용량 제한 (페이지 N개 / 디자인 시스템 M개 / 기능 활성 여부). DB 필드로 박힘 — 결제 활성 여부와 _독립_ 으로 enforcement 단일 경로.
+
+**이 프로젝트에서**: F-036 — user.plan ('free' default) + user.plan_limit (jsonb {pages: 1, design_systems: 1}) 컬럼. F-035/F-037 작업 시 plan_limit 체크 통과해야 새 리소스 생성. F-100 활성 시 soft → hard 전환.
+
+### Upgrade CTA
+
+무료 사용자에게 _유료 전환 권유_ UI. _기능 차단 시점_ 보다 _자연 사용 패턴 도달 시점_ 에 띄우는 게 효과적 (예: 무료 1개 한도 도달 _직전_, 페이지 복제 시도 직후).
+
+**이 프로젝트에서**: F-036 + F-037 영역. _기능 제한 시 거부 메시지_ 가 아닌 _다중 포폴이 가치 있는 자연 시점_ 에 띄움 (ADR-0016 _자연 사용 패턴 기반 과금_ 정합).
