@@ -126,6 +126,14 @@ F-013 description은 이미 *"섹션 단위 *구조 조작* 중심"* + _"자유 
 - design*systems 테이블에 *개별 페이지 override\_ 박기 (page.theme_override_json 영역)
 - Phase 1.5 schema phase enum 추가 _지금_ — Phase 1.5 _활성화_ 시점(베타 도달 후) 결정. F-035/F-036/F-037은 phase: phase*1로 박되 description에 *"Phase 1.5 — 베타 후 폴리시"\_ 표지
 
+### Codex 추천 항목 _작업 시점 결정_ 보류 (망각 방지)
+
+- **Phase 1 _섹션별 외관 커스터마이징_ 8 구체 항목**: 색상 토큰 / 폰트·타이포 토큰 / spacing scale / radius / section background / button style / card style / image radius·crop. 본 ADR Section 1 표는 _"제한적, 토큰"_ 으로만 박음 — _구체 항목_ 은 F-008 Hero 작업 시점 정밀 결정 (`feedback_decision_timing.md` — 미시 결정은 작업 시점). Surface trigger: F-008 description.
+- **Phase 2 design system 추가 항목 2개**: 템플릿별 theme package / 유료 multi-brand kit. 본 ADR Phase 2는 _섹션 내부 고급 grid/layout control_ 만 박음 — design system 추가 항목은 Phase 2 진입 시점 결정 (Codex 추천 인지 + cherry-pick). Surface trigger: F-103 description (템플릿 마켓플레이스).
+- **Phase 3 design token import/export**: 본 ADR Phase 3는 _custom CSS sandbox / custom component builder_ 만 박음 — import/export는 Phase 3 진입 시점 결정. Surface trigger: 메모리 `c3_product_phases.md` _의도적으로 안 할 것_.
+
+이 3건 모두 _보류 사유 + Codex 인지_ 영구화 — plan 0008 Cross-review에 Codex 원본 추천 보존, 본 ADR _의도적으로 안 할 것_ 에 _작업 시점 결정_ 사유 박음.
+
 ## 짝 ADR
 
 ADR-0016 (Free/Pro/Team 비즈니스 모델) — 본 ADR의 _데이터 모델 분리_ 가 _과금 모델 자연스러움_ 의 토대. 둘은 _제품 자유도/구조_ vs _비즈니스 모델_ 다른 카테고리지만 같은 sanity check 결과로 짝 도입.
